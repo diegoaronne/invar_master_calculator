@@ -1,0 +1,109 @@
+{% extends "wizard_base.html" %}
+{% block paso_contenido %}
+
+{% if alertas %}
+<section class="tarjeta-form tarjeta-alertas">
+    <h2>⚠️ Alertas del programa</h2>
+    <ul>{% for a in alertas %}<li>{{ a }}</li>{% endfor %}</ul>
+</section>
+{% endif %}
+
+<div class="dos-columnas">
+<section class="tarjeta-form">
+    <h2>Calendario de trabajo</h2>
+    <p class="nota">Regla por defecto: lunes–viernes jornada completa,
+    sábado media jornada, domingo no trabajable. Marca aquí festivos y
+    jornadas especiales (RF-01..03 video 24).</p>
+    {% if excepciones %}
+    <ul class="lista-recursos">
+        {% for fecha, horas in excepciones %}
+        <li>{{ fecha }} — {{ horas }} h</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    <form method="post" action="/wizard/5/calendario" class="form-grid">
+        <label>Fecha <input type="date" name="fecha" required></label>
+        <label>Hasta (opcional, para rangos)
+            <input type="date" name="fecha_hasta"></label>
+        <label>Estado
+            <select name="estado_dia">
+                <option value="NO_TRABAJABLE">No trabajable (festivo)</option>
+                <option value="TRABAJABLE">Trabajable (jornada completa)</option>
+                <option value="MEDIO_TRABAJABLE">Medio trabajable</option>
+                <option value="PERSONALIZADO">Personalizado (define horas)</option>
+            </select>
+        </label>
+        <label>Horas (solo personalizado) <input name="horas" placeholder="ej. 5"></label>
+        <button type="submit" class="btn-primario">Marcar día(s)</button>
+    </form>
+</section>
+
+<section class="tarjeta-form">
+    <h2>Programar actividad</h2>
+    <form method="post" action="/wizard/5/actividad" class="form-grid">
+        <label>Concepto
+            <select name="concepto" required>
+                {% for c in conceptos %}
+                <option value="{{ c.clave }}">{{ c.clave }} — {{ c.descripcion }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Fecha de inicio <input type="date" name="inicio" required></label>
+        <label>Duración (días laborables) <input name="duracion" required></label>
+        <label>% de la cantidad en esta etapa
+            <input name="porcentaje" value="100"></label>
+        <label>Predecesoras (Ctrl+clic para varias)
+            <select name="predecesoras" multiple size="3">
+                {% for a in actividades %}
+                <option value="{{ a.indice }}">{{ a.clave }} ({{ a.inicio }} → {{ a.fin }})</option>
+                {% endfor %}
+            </select>
+        </label>
+        <button type="submit" class="btn-primario">Programar</button>
+    </form>
+</section>
+</div>
+
+<section class="tarjeta-form">
+    <h2>Actividades programadas</h2>
+    {% if actividades %}
+    <table class="tabla-simple">
+        <thead><tr><th>Concepto</th><th>Inicio</th><th>Fin</th>
+            <th>Días lab.</th><th>% prog.</th><th>Ruta crítica</th></tr></thead>
+        <tbody>
+        {% for a in actividades %}
+        <tr>
+            <td><code>{{ a.clave }}</code> {{ a.descripcion }}</td>
+            <td>{{ a.inicio }}</td><td>{{ a.fin }}</td>
+            <td>{{ a.duracion }}</td><td>{{ a.porcentaje }}%</td>
+            <td>{% if a.critica %}🔴 crítica{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <div class="acciones-secundarias">
+        <form method="post" action="/wizard/5/sincronizar" class="form-inline">
+            <button type="submit" class="btn-secundario">
+                Sincronizar fechas del proyecto con el programa</button>
+        </form>
+    </div>
+    <h3>Fraccionar actividad (agregar etapa)</h3>
+    <form method="post" action="/wizard/5/segmento" class="form-grid">
+        <label>Actividad
+            <select name="actividad" required>
+                {% for a in actividades %}
+                <option value="{{ a.indice }}">{{ a.clave }} ({{ a.porcentaje }}% programado)</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Inicio de la etapa <input type="date" name="inicio" required></label>
+        <label>Duración (días laborables) <input name="duracion" required></label>
+        <label>% de la cantidad <input name="porcentaje" required></label>
+        <button type="submit" class="btn-primario">Agregar etapa</button>
+    </form>
+    {% else %}
+    <p class="nota">Sin actividades aún. El financiamiento (paso 6)
+    necesita el programa para conocer los egresos por periodo.</p>
+    {% endif %}
+</section>
+{% endblock %}

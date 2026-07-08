@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block titulo %}Panel — INVAR Master Calculator{% endblock %}
+{% block acciones_header %}
+<form method="post" action="/logout" class="form-inline">
+    <button type="submit" class="btn-secundario">Salir</button>
+</form>
+{% endblock %}
+{% block contenido %}
+<h1>{{ nombre_proyecto }}</h1>
+{% if ok %}<p class="flash flash-ok">{{ ok }}</p>{% endif %}
+<p class="subtitulo">
+    Sesión de demostración aislada: lo que captures aquí no afecta a
+    ninguna otra persona. Empieza por el wizard para capturar tu propio
+    proyecto, o explora los reportes del proyecto actual.
+</p>
+
+<div class="grid-acciones">
+    <a class="tarjeta-accion" href="/wizard/1">
+        <h2>✏️ Wizard de captura</h2>
+        <p>Captura o edita el proyecto paso a paso: datos generales,
+        catálogo, matrices, WBS, programa y sobrecostos.</p>
+    </a>
+    <a class="tarjeta-accion" href="/reportes/interno">
+        <h2>🔒 Vista interna</h2>
+        <p>Presupuesto completo con FSR, pie de precios, indirectos,
+        financiamiento y utilidad. Solo para el equipo de Invar.</p>
+    </a>
+    <a class="tarjeta-accion" href="/reportes/cliente">
+        <h2>🤝 Vista cliente</h2>
+        <p>Presupuesto presentable, sin márgenes internos ni desglose
+        financiero. Lista para compartir e imprimir.</p>
+    </a>
+</div>
+
+<div class="acciones-secundarias">
+    <form method="post" action="/proyecto/nuevo" class="form-inline"
+          onsubmit="return confirm('Esto reemplaza el proyecto actual de tu sesión por uno en blanco. ¿Continuar?');">
+        <button type="submit" class="btn-secundario">🆕 Proyecto nuevo desde cero</button>
+    </form>
+    <form method="post" action="/proyecto/plantilla" class="form-inline"
+          onsubmit="return confirm('Esto reemplaza el proyecto actual por una copia del demo como plantilla. ¿Continuar?');">
+        <button type="submit" class="btn-secundario">📋 Usar demo como plantilla</button>
+    </form>
+    <form method="post" action="/reset-demo" class="form-inline"
+          onsubmit="return confirm('Esto descarta tus cambios y restaura el proyecto demo. ¿Continuar?');">
+        <button type="submit" class="btn-secundario">♻️ Reiniciar demo</button>
+    </form>
+</div>
+{% endblock %}

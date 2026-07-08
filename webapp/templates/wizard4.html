@@ -1,0 +1,101 @@
+{% extends "wizard_base.html" %}
+{% block paso_contenido %}
+
+<section class="tarjeta-form">
+    <h2>Estructura del presupuesto (WBS)</h2>
+    {% if arbol %}
+    <ul class="arbol-wbs">
+        {% for nivel, nodo in arbol %}
+        <li style="margin-left: {{ (nivel - 1) * 1.5 }}rem">
+            {% if es_agrupador(nodo) %}
+                📁 <strong>{{ nodo.clave }}</strong> {{ nodo.descripcion }}
+            {% else %}
+                📄 <code>{{ nodo.clave }}</code> {{ nodo.descripcion }}
+                — {{ nodo.cantidad_efectiva }} {{ nodo.unidad }}
+                {% if nodo.matriz %}(matriz {{ nodo.matriz.clave }}){% endif %}
+                {% if nodo.generador %}<em>· por generadores</em>{% endif %}
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="nota">La estructura está vacía. Crea un agrupador (partida)
+    y luego agrega conceptos dentro.</p>
+    {% endif %}
+</section>
+
+<div class="dos-columnas">
+<section class="tarjeta-form">
+    <h2>Agregar agrupador</h2>
+    <form method="post" action="/wizard/4/agrupador" class="form-grid">
+        <label>Dentro de
+            <select name="padre">
+                <option value="">(raíz del presupuesto)</option>
+                {% for ruta, ag in agrupadores %}
+                <option value="{{ ruta }}">{{ ruta }} — {{ ag.descripcion }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Clave <input name="clave" required placeholder="01"></label>
+        <label>Descripción <input name="descripcion" placeholder="Preliminares"></label>
+        <button type="submit" class="btn-primario">Agregar agrupador</button>
+    </form>
+</section>
+
+<section class="tarjeta-form">
+    <h2>Agregar concepto</h2>
+    <form method="post" action="/wizard/4/concepto" class="form-grid">
+        <label>Agrupador
+            <select name="agrupador" required>
+                {% for ruta, ag in agrupadores %}
+                <option value="{{ ruta }}">{{ ruta }} — {{ ag.descripcion }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Clave <input name="clave" required></label>
+        <label>Descripción <input name="descripcion"></label>
+        <label>Unidad <input name="unidad" list="unidades" value="m2" required></label>
+        <label>Cantidad (deja 0 si usarás generadores)
+            <input name="cantidad" value="0">
+        </label>
+        <label>Matriz de PU
+            <select name="matriz">
+                <option value="">(sin matriz)</option>
+                {% for m in matrices %}
+                <option value="{{ m.clave }}">{{ m.clave }} — {{ m.descripcion }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <button type="submit" class="btn-primario">Agregar concepto</button>
+    </form>
+</section>
+</div>
+
+<section class="tarjeta-form">
+    <h2>Números generadores</h2>
+    <p class="nota">Cada línea calcula largo × ancho × alto × piezas; la
+    cantidad del concepto pasa a ser la suma de sus líneas (deja vacía la
+    dimensión que no aplique, o usa "cantidad directa" para capturar el
+    valor medido). RF-01..04 video 10.</p>
+    <form method="post" action="/wizard/4/generador" class="form-grid form-grid-3">
+        <label>Concepto
+            <select name="concepto" required>
+                {% for c in conceptos %}
+                <option value="{{ c.clave }}">{{ c.clave }} — {{ c.descripcion }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Referencia (tramo/eje) <input name="referencia" placeholder="Cuerpo A, Eje 1-4"></label>
+        <label>Largo <input name="largo"></label>
+        <label>Ancho <input name="ancho"></label>
+        <label>Alto <input name="alto"></label>
+        <label>Piezas <input name="piezas" value="1"></label>
+        <label>Cantidad directa (opcional) <input name="cantidad_directa"></label>
+        <button type="submit" class="btn-primario">Agregar línea de generador</button>
+    </form>
+</section>
+
+<datalist id="unidades">
+    {% for u in unidades %}<option value="{{ u }}">{% endfor %}
+</datalist>
+{% endblock %}

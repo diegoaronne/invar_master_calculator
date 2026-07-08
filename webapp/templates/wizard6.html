@@ -1,0 +1,144 @@
+{% extends "wizard_base.html" %}
+{% block paso_contenido %}
+
+{% if resumen %}
+<section class="tarjeta-form tarjeta-resumen">
+    <h2>Resumen actual</h2>
+    <div class="kpis">
+        <div><span>Costo directo</span><strong>${{ resumen.costo_directo }}</strong></div>
+        <div><span>Precio de venta</span><strong>${{ resumen.precio_venta }}</strong></div>
+        <div><span>Total con IVA</span><strong>${{ resumen.total_con_iva }}</strong></div>
+    </div>
+    {% if detalle_pie %}
+    <table class="tabla-simple">
+        <thead><tr><th>Cargo</th><th>%</th><th>Importe</th></tr></thead>
+        <tbody>
+        {% for r in detalle_pie.renglones %}
+        <tr><td>{{ r.nombre }}</td><td>{{ r.porcentaje }}%</td><td>${{ r.importe }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</section>
+{% endif %}
+
+{% if avisos %}
+<section class="tarjeta-form tarjeta-alertas">
+    <h2>⚠️ Avisos</h2>
+    <ul>{% for a in avisos %}<li>{{ a }}</li>{% endfor %}</ul>
+</section>
+{% endif %}
+
+<div class="dos-columnas">
+<section class="tarjeta-form">
+    <h2>Indirectos (Art. 180)</h2>
+    <p class="nota">
+        {% if estado_sesion.indirectos %}Configurado
+        ({{ estado_sesion.indirectos.metodo_oficina_central.value }},
+        {{ estado_sesion.indirectos.personal | length }} personas,
+        {{ estado_sesion.indirectos.gastos | length }} gastos).
+        {% else %}Sin configurar.{% endif %}
+    </p>
+    <form method="post" action="/wizard/6/indirectos" class="form-grid">
+        <label>Método de oficina central
+            <select name="metodo">
+                {% for m in metodos_oficina %}
+                <option value="{{ m.name }}">{{ m.value }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>% de gasto total (método porcentaje)
+            <input name="porcentaje_gasto_total" value="0"></label>
+        <label>Gasto anual de oficina (anualizado)
+            <input name="gasto_anual_oficina" value="0"></label>
+        <label>Ingresos anuales por obras (anualizado)
+            <input name="ingresos_anuales_obras" value="0"></label>
+        <label>Duración de la obra (meses)
+            <input name="duracion_obra_meses" value="0"></label>
+        <button type="submit" class="btn-primario">Guardar indirectos</button>
+    </form>
+    <h3>Personal indirecto</h3>
+    <form method="post" action="/wizard/6/indirectos/personal" class="form-grid">
+        <label>Puesto <input name="puesto" required></label>
+        <label>Salario mensual <input name="salario_mensual" required></label>
+        <label>Meses <input name="meses" required></label>
+        <label>Zona
+            <select name="zona">
+                {% for z in zonas %}<option value="{{ z.name }}">{{ z.value }}</option>{% endfor %}
+            </select>
+        </label>
+        <label>Cantidad <input name="cantidad" value="1"></label>
+        <label class="campo-check">
+            <input type="checkbox" name="usa_fsr"> Aplicar FSR al salario
+        </label>
+        <button type="submit" class="btn-primario">Agregar personal</button>
+    </form>
+    <h3>Gastos indirectos</h3>
+    <form method="post" action="/wizard/6/indirectos/gasto" class="form-grid">
+        <label>Concepto <input name="concepto" required></label>
+        <label>Importe mensual <input name="importe_mensual" required></label>
+        <label>Meses <input name="meses" required></label>
+        <label>Zona
+            <select name="zona">
+                {% for z in zonas %}<option value="{{ z.name }}">{{ z.value }}</option>{% endfor %}
+            </select>
+        </label>
+        <button type="submit" class="btn-primario">Agregar gasto</button>
+    </form>
+</section>
+
+<div>
+<section class="tarjeta-form">
+    <h2>Financiamiento (Art. 183–184)</h2>
+    <p class="nota">
+        {% if estado_sesion.financiamiento %}Configurado (tasa activa
+        {{ estado_sesion.financiamiento.tasa_activa_anual_pct }}%,
+        anticipo {{ estado_sesion.financiamiento.anticipo_pct }}%).
+        {% else %}Sin configurar. Requiere programa de obra (paso 5).{% endif %}
+    </p>
+    <form method="post" action="/wizard/6/financiamiento" class="form-grid">
+        <label>Tasa activa anual (%) <input name="tasa_activa" required></label>
+        <label>Tasa pasiva anual (%) <input name="tasa_pasiva" value="0"></label>
+        <label>Desfase de cobro (periodos) <input name="desfase_cobro" value="2"></label>
+        <label>Anticipo (%) <input name="anticipo_pct" value="0"></label>
+        <button type="submit" class="btn-primario">Guardar financiamiento</button>
+    </form>
+</section>
+
+<section class="tarjeta-form">
+    <h2>Utilidad (Art. 188)</h2>
+    <p class="nota">
+        {% if estado_sesion.utilidad %}Configurada (neta deseada
+        {{ estado_sesion.utilidad.utilidad_neta_pct }}%).
+        {% else %}Sin configurar.{% endif %}
+        La utilidad bruta se calcula protegiendo ISR y PTU.
+    </p>
+    <form method="post" action="/wizard/6/utilidad" class="form-grid">
+        <label>ISR (%) <input name="isr_pct" value="30"></label>
+        <label>PTU (%) <input name="ptu_pct" value="10"></label>
+        <label>Utilidad neta deseada (%) <input name="utilidad_neta_pct" required></label>
+        <button type="submit" class="btn-primario">Guardar utilidad</button>
+    </form>
+</section>
+
+<section class="tarjeta-form">
+    <h2>Cargos adicionales</h2>
+    <form method="post" action="/wizard/6/adicionales" class="form-grid">
+        <label>Porcentaje (ej. 0.5 para 5 al millar)
+            <input name="porcentaje"
+                   value="{{ estado_sesion.adicionales_pct or '0' }}" required></label>
+        <button type="submit" class="btn-primario">Guardar adicionales</button>
+    </form>
+</section>
+</div>
+</div>
+
+<section class="tarjeta-form tarjeta-aplicar">
+    <h2>Aplicar al pie de precios</h2>
+    <p class="nota">Transfiere indirectos → financiamiento → utilidad →
+    adicionales al pie y recalcula el presupuesto (RF-04 video 28).</p>
+    <form method="post" action="/wizard/6/aplicar" class="form-inline">
+        <button type="submit" class="btn-primario">⚙️ Aplicar sobrecostos y recalcular</button>
+    </form>
+</section>
+{% endblock %}

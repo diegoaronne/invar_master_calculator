@@ -30,7 +30,8 @@ La matriz de trazabilidad requerimiento → módulo está en
 
 ## Requisitos
 
-Python 3.10+. Sin dependencias externas.
+Python 3.10+. El motor de cálculo no tiene dependencias externas; la
+interfaz web usa FastAPI (ver `requirements.txt`).
 
 ## Uso rápido
 
@@ -69,11 +70,46 @@ reportes:
 python3 demo.py
 ```
 
+## Interfaz web (`webapp/`)
+
+Prototipo FastAPI + Jinja2 que envuelve el motor sin modificarlo:
+
+- **Login demo** con sesión aislada por usuario (cada quien recibe su
+  propia copia del proyecto; dos pestañas no se pisan datos).
+- **Wizard de captura en 6 pasos**: datos generales → catálogo de
+  recursos (materiales, mano de obra con FSR, cuadrillas con fórmulas
+  `1/10`, herramienta %MO, auxiliares, equipo con costo horario) →
+  matrices de PU → WBS/conceptos con números generadores → calendario y
+  programa (ruta crítica, fraccionamiento) → sobrecostos (indirectos,
+  financiamiento, utilidad, adicionales).
+- **Dos vistas de reporte**: *interna* (todo: pie de precios, FSR,
+  explosión, suministros, financiamiento) y *cliente* (presupuesto y APU
+  sin desglose de márgenes ni costo directo). Cada tabla se descarga en
+  CSV y la vista completa se imprime/exporta a PDF desde el navegador.
+
+```bash
+pip install -r requirements.txt
+uvicorn webapp.main:app --reload
+# http://127.0.0.1:8000 — clave demo: variable INVAR_DEMO_PASSWORD
+# (default de desarrollo: invar2026)
+```
+
+Deploy (Render/Railway): build `pip install -r requirements.txt`, start
+`uvicorn webapp.main:app --host 0.0.0.0 --port $PORT` (incluido en el
+`Procfile`) y definir `INVAR_DEMO_PASSWORD` como variable de entorno.
+El almacén de sesiones es en memoria (un solo proceso); para escalar a
+varias instancias hay que respaldarlo en Redis/DB manteniendo la
+interfaz `get/put/reset` de `webapp/session_store.py`.
+
 ## Pruebas
 
 ```bash
-python3 -m unittest discover -s tests
+python3 -m unittest discover -s tests   # motor + webapp (114 pruebas)
 ```
+
+Las pruebas web (`tests/test_webapp.py`) necesitan
+`pip install -r requirements-dev.txt`; si FastAPI/httpx no están
+instalados se omiten sin afectar la suite del motor.
 
 ## Alcance
 

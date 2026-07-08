@@ -1,0 +1,3 @@
+-r requirements.txt
+# Cliente de pruebas de FastAPI (tests/test_webapp.py):
+httpx>=0.27

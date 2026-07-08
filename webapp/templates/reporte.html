@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block titulo %}Reporte {{ modo }} — {{ nombre_proyecto }}{% endblock %}
+{% block acciones_header %}
+<div class="acciones-header">
+    {% if modo == "interno" %}
+        <a href="/reportes/cliente" class="btn-secundario">Ver vista cliente</a>
+    {% else %}
+        <a href="/reportes/interno" class="btn-secundario">Ver vista interna</a>
+    {% endif %}
+    <a href="/dashboard" class="btn-secundario">← Volver</a>
+</div>
+{% endblock %}
+{% block contenido %}
+<div class="encabezado-reporte">
+    <h1>{{ nombre_proyecto }}</h1>
+    <span class="etiqueta-modo etiqueta-{{ modo }}">
+        {% if modo == "interno" %}Vista interna{% else %}Vista cliente{% endif %}
+    </span>
+    <button class="btn-primario no-imprimir" onclick="window.print()">
+        🖨 Imprimir / Guardar PDF
+    </button>
+</div>
+
+{% if conceptos %}
+<nav class="apu-nav no-imprimir">
+    <span>APU por concepto:</span>
+    {% for clave in conceptos %}
+        <a href="/reportes/{{ modo }}/apu/{{ clave }}">{{ clave }}</a>
+    {% endfor %}
+</nav>
+{% endif %}
+
+{{ html_tablas | safe }}
+{% endblock %}

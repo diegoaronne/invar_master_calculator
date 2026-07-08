@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block titulo %}Paso {{ paso }} — INVAR Master Calculator{% endblock %}
+{% block acciones_header %}
+<a href="/dashboard" class="btn-secundario">← Panel</a>
+{% endblock %}
+{% block contenido %}
+<nav class="wizard-nav">
+    {% for numero, titulo in pasos %}
+        <a href="/wizard/{{ numero }}"
+           class="wizard-paso {% if numero == paso %}activo{% endif %}">
+            <span class="wizard-num">{{ numero }}</span> {{ titulo }}
+        </a>
+    {% endfor %}
+    <a href="/reportes/interno" class="wizard-paso wizard-final">📄 Reportes</a>
+</nav>
+
+<h1 class="wizard-titulo">{{ nombre_proyecto }}</h1>
+
+{% if error %}<p class="flash flash-error">{{ error }}</p>{% endif %}
+{% if ok %}<p class="flash flash-ok">{{ ok }}</p>{% endif %}
+
+{% block paso_contenido %}{% endblock %}
+
+<div class="wizard-pie">
+    {% if paso > 1 %}<a class="btn-secundario" href="/wizard/{{ paso - 1 }}">← Paso anterior</a>{% endif %}
+    {% if paso < 6 %}<a class="btn-primario" href="/wizard/{{ paso + 1 }}">Siguiente paso →</a>
+    {% else %}<a class="btn-primario" href="/reportes/interno">Ver reportes →</a>{% endif %}
+</div>
+{% endblock %}

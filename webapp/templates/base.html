@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block titulo %}INVAR Master Calculator{% endblock %}</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <header class="topbar no-imprimir">
+        <a class="marca" href="/dashboard">INVAR <strong>Master Calculator</strong></a>
+        {% block acciones_header %}{% endblock %}
+    </header>
+    <main class="contenido">
+        {% block contenido %}{% endblock %}
+    </main>
+</body>
+</html>

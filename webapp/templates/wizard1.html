@@ -1,0 +1,39 @@
+{% extends "wizard_base.html" %}
+{% block paso_contenido %}
+<section class="tarjeta-form">
+    <h2>Datos generales del proyecto</h2>
+    <form method="post" action="/wizard/1" class="form-grid">
+        <label>Nombre del proyecto (máx. 128)
+            <input name="nombre" required maxlength="128"
+                   value="{{ proyecto.nombre }}">
+        </label>
+        <label>Cliente
+            <input name="cliente" value="{{ datos.cliente }}">
+        </label>
+        <label>Autor / empresa
+            <input name="autor" value="{{ datos.autor }}">
+        </label>
+        <label>Ubicación
+            <input name="ubicacion" value="{{ datos.ubicacion }}">
+        </label>
+        <label class="campo-ancho">Descripción de la obra
+            <textarea name="descripcion_obra" rows="2">{{ datos.descripcion_obra }}</textarea>
+        </label>
+        <label>Fecha de inicio
+            <input type="date" name="fecha_inicio"
+                   value="{{ datos.fecha_inicio or '' }}">
+        </label>
+        <label>Fecha de término
+            <input type="date" name="fecha_fin"
+                   value="{{ datos.fecha_fin or '' }}">
+        </label>
+        <label>IVA (%)
+            <input name="iva_pct" value="{{ proyecto.iva_pct }}">
+        </label>
+        <label class="campo-ancho">Responsables (uno por línea)
+            <textarea name="responsables" rows="3">{{ datos.responsables | join('\n') }}</textarea>
+        </label>
+        <button type="submit" class="btn-primario">Guardar datos generales</button>
+    </form>
+</section>
+{% endblock %}

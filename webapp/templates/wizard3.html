@@ -1,0 +1,65 @@
+{% extends "wizard_base.html" %}
+{% block paso_contenido %}
+
+<section class="tarjeta-form">
+    <h2>Matrices de precio unitario</h2>
+    {% for matriz, insumos, costo in detalle_matrices %}
+    <div class="matriz-detalle">
+        <h3><code>{{ matriz.clave }}</code> {{ matriz.descripcion }}
+            ({{ matriz.unidad }}) — costo directo unitario:
+            <strong>${{ costo }}</strong></h3>
+        <ul class="lista-recursos">
+            {% for insumo, recurso in insumos %}
+            <li>{{ recurso.clave }} — {{ recurso.descripcion }}
+                × {{ insumo.cantidad }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% else %}
+    <p class="nota">Aún no hay matrices. Crea la primera abajo.</p>
+    {% endfor %}
+</section>
+
+<div class="dos-columnas">
+<section class="tarjeta-form">
+    <h2>Crear matriz</h2>
+    <form method="post" action="/wizard/3/matriz" class="form-grid">
+        <label>Clave <input name="clave" required></label>
+        <label>Descripción <input name="descripcion"></label>
+        <label>Unidad <input name="unidad" list="unidades" value="m2" required></label>
+        <button type="submit" class="btn-primario">Crear matriz</button>
+    </form>
+</section>
+
+<section class="tarjeta-form">
+    <h2>Agregar insumo a una matriz</h2>
+    <form method="post" action="/wizard/3/insumo" class="form-grid">
+        <label>Matriz
+            <select name="matriz" required>
+                {% for matriz, _, _ in detalle_matrices %}
+                <option value="{{ matriz.clave }}">{{ matriz.clave }} — {{ matriz.descripcion }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Recurso
+            <select name="recurso" required>
+                {% for r in recursos %}
+                <option value="{{ r.clave }}">[{{ r.tipo.value }}] {{ r.clave }} — {{ r.descripcion }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Cantidad por unidad (admite fórmulas)
+            <input name="cantidad" value="1" required>
+        </label>
+        <button type="submit" class="btn-primario">Agregar insumo</button>
+    </form>
+    <p class="nota">Para herramienta %MO, la cantidad es el porcentaje
+    expresado como fracción (ej. <code>0.03</code> = 3% de la mano de obra).
+    Las matrices también pueden anidarse como insumo de otra matriz.</p>
+</section>
+</div>
+
+<datalist id="unidades">
+    {% for u in unidades %}<option value="{{ u }}">{% endfor %}
+</datalist>
+{% endblock %}

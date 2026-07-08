@@ -1,0 +1,182 @@
+{% extends "wizard_base.html" %}
+{% block paso_contenido %}
+
+<section class="tarjeta-form">
+    <h2>Factor de Salario Real (FSR)</h2>
+    <p class="nota">Aplica a toda la mano de obra con "usa FSR" activado
+    (Art. 190 RLOPSRM). FSR actual del proyecto:
+    <strong>{{ hoja_fsr.factor('310') if hoja_fsr else '—' }}</strong>
+    (calculado sobre un salario de $310).</p>
+    <form method="post" action="/wizard/2/fsr" class="form-grid">
+        <label>Salario mínimo general
+            <input name="salario_minimo" value="{{ hoja_fsr.salario_minimo_general if hoja_fsr else '278.80' }}" required>
+        </label>
+        <label>Prima de riesgo (%)
+            <input name="prima_riesgo_pct" value="{{ hoja_fsr.prima_riesgo_pct if hoja_fsr else '7.58875' }}" required>
+        </label>
+        <label>ISN (%)
+            <input name="isn_pct" value="{{ hoja_fsr.isn_pct if hoja_fsr else '3.0' }}">
+        </label>
+        <label>Días no laborables por clima
+            <input name="dias_por_clima" value="{{ hoja_fsr.calendario.dias_por_clima if hoja_fsr else 0 }}">
+        </label>
+        <label class="campo-check">
+            <input type="checkbox" name="incluir_isn"
+                   {% if not hoja_fsr or hoja_fsr.incluir_isn %}checked{% endif %}>
+            Incluir ISN en el FSR (verificar no duplicarlo en indirectos)
+        </label>
+        <button type="submit" class="btn-primario">Guardar FSR</button>
+    </form>
+</section>
+
+<div class="dos-columnas">
+<section class="tarjeta-form">
+    <h2>Materiales <span class="badge">{{ materiales | length }}</span></h2>
+    <ul class="lista-recursos">
+        {% for r in materiales %}
+        <li><code>{{ r.clave }}</code> {{ r.descripcion }} — {{ r.unidad }} — ${{ r.costo }}</li>
+        {% endfor %}
+    </ul>
+    <form method="post" action="/wizard/2/material" class="form-grid">
+        <label>Clave <input name="clave" required></label>
+        <label>Descripción <input name="descripcion"></label>
+        <label>Unidad
+            <input name="unidad" list="unidades" value="pza" required>
+        </label>
+        <label>Costo <input name="costo" value="0" required></label>
+        <label>Familia <input name="familia"></label>
+        <label class="campo-check">
+            <input type="checkbox" name="indivisible"> Indivisible (fuerza enteros en explosión)
+        </label>
+        <button type="submit" class="btn-primario">Agregar material</button>
+    </form>
+</section>
+
+<section class="tarjeta-form">
+    <h2>Mano de obra <span class="badge">{{ mano_obra_simple | length }}</span></h2>
+    <ul class="lista-recursos">
+        {% for r in mano_obra_simple %}
+        <li><code>{{ r.clave }}</code> {{ r.descripcion }} — salario ${{ r.salario_base }}
+            {% if r.usa_fsr %}(con FSR){% endif %}</li>
+        {% endfor %}
+    </ul>
+    <form method="post" action="/wizard/2/mano-obra" class="form-grid">
+        <label>Clave <input name="clave" required></label>
+        <label>Descripción <input name="descripcion"></label>
+        <label>Salario base (por jornada) <input name="salario_base" required></label>
+        <label>FSR manual (opcional) <input name="fsr_manual" placeholder="vacío = automático"></label>
+        <label class="campo-check">
+            <input type="checkbox" name="usa_fsr" checked> Aplicar FSR automático
+        </label>
+        <button type="submit" class="btn-primario">Agregar mano de obra</button>
+    </form>
+</section>
+</div>
+
+<div class="dos-columnas">
+<section class="tarjeta-form">
+    <h2>Cuadrillas y auxiliares
+        <span class="badge">{{ (cuadrillas | length) + (auxiliares | length) }}</span></h2>
+    <ul class="lista-recursos">
+        {% for r in cuadrillas + auxiliares %}
+        <li><code>{{ r.clave }}</code> {{ r.descripcion }} ({{ r.tipo.value }})
+            <ul>
+            {% for c in r.componentes %}
+                <li>{{ c.recurso.clave }} × {{ c.cantidad }}</li>
+            {% endfor %}
+            </ul>
+        </li>
+        {% endfor %}
+    </ul>
+    <h3>1) Crear compuesto</h3>
+    <form method="post" action="/wizard/2/compuesto" class="form-grid">
+        <label>Tipo
+            <select name="tipo">
+                <option value="cuadrilla">Cuadrilla (mano de obra)</option>
+                <option value="auxiliar">Auxiliar (receta, ej. concreto)</option>
+            </select>
+        </label>
+        <label>Clave <input name="clave" required></label>
+        <label>Descripción <input name="descripcion"></label>
+        <label>Unidad (solo auxiliar)
+            <input name="unidad" list="unidades" value="m3">
+        </label>
+        <button type="submit" class="btn-primario">Crear compuesto</button>
+    </form>
+    <h3>2) Agregar componente</h3>
+    <form method="post" action="/wizard/2/componente" class="form-grid">
+        <label>Compuesto
+            <select name="padre">
+                {% for r in cuadrillas + auxiliares %}
+                <option value="{{ r.clave }}">{{ r.clave }} — {{ r.descripcion }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Recurso componente
+            <select name="recurso">
+                {% for r in mano_obra_simple + materiales + auxiliares + cuadrillas %}
+                <option value="{{ r.clave }}">{{ r.clave }} — {{ r.descripcion }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>Cantidad (admite fórmulas, ej. <code>1/10</code>)
+            <input name="cantidad" value="1" required>
+        </label>
+        <button type="submit" class="btn-primario">Agregar componente</button>
+    </form>
+</section>
+
+<section class="tarjeta-form">
+    <h2>Herramienta y eq. de seguridad <span class="badge">{{ herramientas | length }}</span></h2>
+    <ul class="lista-recursos">
+        {% for r in herramientas %}
+        <li><code>{{ r.clave }}</code> {{ r.descripcion }} (%MO reactivo)</li>
+        {% endfor %}
+    </ul>
+    <p class="nota">Su costo se calcula como porcentaje de la mano de obra
+    de cada matriz donde participan (la cantidad del insumo es el %).</p>
+    <form method="post" action="/wizard/2/herramienta" class="form-grid">
+        <label>Clave <input name="clave" required></label>
+        <label>Descripción <input name="descripcion"></label>
+        <button type="submit" class="btn-primario">Agregar herramienta %MO</button>
+    </form>
+</section>
+</div>
+
+<section class="tarjeta-form">
+    <h2>Equipo con costo horario <span class="badge">{{ equipos | length }}</span></h2>
+    <ul class="lista-recursos">
+        {% for r in equipos %}
+        <li><code>{{ r.clave }}</code> {{ r.descripcion }}</li>
+        {% endfor %}
+    </ul>
+    <form method="post" action="/wizard/2/equipo" class="form-grid form-grid-3">
+        <label>Clave <input name="clave" required></label>
+        <label>Descripción <input name="descripcion"></label>
+        <label>Valor de adquisición <input name="valor_adquisicion" value="0" required></label>
+        <label>Valor de llantas <input name="valor_llantas" value="0"></label>
+        <label>% de rescate <input name="porcentaje_rescate" value="10"></label>
+        <label>Vida económica (años) <input name="vida_economica_anios" value="5"></label>
+        <label>Horas por año <input name="horas_por_anio" value="2000"></label>
+        <label>Tasa de interés anual (%) <input name="tasa_interes_anual_pct" value="12"></label>
+        <label>Prima de seguro anual (%) <input name="prima_seguro_anual_pct" value="3"></label>
+        <label>Factor de mantenimiento <input name="factor_mantenimiento" value="0.80"></label>
+        <label>Potencia (HP) <input name="potencia_hp" value="0"></label>
+        <label>Factor de operación <input name="factor_operacion" value="0.75"></label>
+        <label>Coef. combustible <input name="coeficiente_combustible" value="0.24"></label>
+        <label>Precio combustible ($/lt) <input name="precio_combustible" value="0"></label>
+        <label>Capacidad del cárter (lt) <input name="capacidad_carter" value="0"></label>
+        <label>Horas entre cambios de aceite <input name="horas_entre_cambios_aceite" value="100"></label>
+        <label>Precio lubricante ($/lt) <input name="precio_lubricante" value="0"></label>
+        <label>Vida de llantas (horas) <input name="vida_llantas_horas" value="0"></label>
+        <label>Operador (puesto) <input name="operador_puesto" placeholder="vacío = sin operador"></label>
+        <label>Salario real por turno del operador <input name="operador_salario_turno" value="0"></label>
+        <label>Horas efectivas por turno <input name="horas_efectivas_turno" value="8"></label>
+        <button type="submit" class="btn-primario">Agregar equipo</button>
+    </form>
+</section>
+
+<datalist id="unidades">
+    {% for u in unidades %}<option value="{{ u }}">{% endfor %}
+</datalist>
+{% endblock %}
