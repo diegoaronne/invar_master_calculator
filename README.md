@@ -1,8 +1,7 @@
 # INVAR Master Calculator
 
 Motor de cálculo para **presupuestos de obra y precios unitarios**,
-desarrollado a partir de la especificación de requerimientos derivada del
-análisis técnico de OPUS Planet (documentos `reqs_sopu`, videos 1–35).
+desarrollado a partir de la especificación de requerimientos
 
 Implementa en Python puro (sin dependencias externas, `decimal` para toda
 la aritmética) el ciclo completo de un presupuesto de obra conforme a la
