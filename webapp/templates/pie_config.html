@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block titulo %}Pie de precios — {{ nombre_proyecto }}{% endblock %}
+{% block acciones_header %}
+<div class="acciones-header">
+    <a href="/hoja" class="btn-secundario">← Hoja de presupuesto</a>
+</div>
+{% endblock %}
+{% block contenido %}
+<h1>Configuración del pie de precios unitarios</h1>
+{% if error %}<p class="flash flash-error">{{ error }}</p>{% endif %}
+{% if ok %}<p class="flash flash-ok">{{ ok }}</p>{% endif %}
+
+<section class="tarjeta-form">
+    <h2>Tipo de pie de precios</h2>
+    <form method="post" action="/pie/modo" class="form-inline opciones-modo">
+        {% for m in modos %}
+        <label class="campo-check">
+            <input type="radio" name="modo" value="{{ m }}"
+                   {% if pie.modo == m %}checked{% endif %}> {{ m }}
+        </label>
+        {% endfor %}
+        <button type="submit" class="btn-primario">Cambiar modo</button>
+    </form>
+    <p class="nota">En modo <em>Estándar</em> cada cargo aplica su
+    porcentaje sobre su base (Directo o Acumulable). En modo
+    <em>Avanzado</em> puedes capturar fórmulas con las variables
+    <code>CD</code> (costo directo), <code>ACUM</code> (acumulado previo)
+    y los identificadores de cargos anteriores.</p>
+</section>
+
+<section class="tarjeta-form">
+    <h2>Porcentajes del pie de precios unitarios</h2>
+    <p class="nota">Sobre un costo directo total de
+    <strong>$ {{ pie.costo_directo_fmt }}</strong> el precio de venta
+    resulta en <strong>$ {{ pie.precio_venta_fmt }}</strong>
+    (factor {{ pie.factor }}). El orden de los renglones es la jerarquía
+    de aplicación.</p>
+
+    {% for r in pie.renglones %}
+    <form method="post" action="/pie/cargo/{{ r.id }}" class="form-grid form-cargo">
+        <span class="badge">{{ r.id }}</span>
+        <label>Nombre <input name="nombre" value="{{ r.nombre }}" required></label>
+        <label>Porcentaje <input name="porcentaje" value="{{ r.porcentaje }}"></label>
+        <label>Base
+            <select name="base">
+                {% for b in bases %}
+                <option value="{{ b }}" {% if r.base == b %}selected{% endif %}>{{ b }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        {% if pie.modo == "Avanzado" %}
+        <label>Fórmula <input name="formula" value="{{ r.formula }}"
+               placeholder="ej. ACUM*0.05"></label>
+        {% endif %}
+        <label class="campo-check" title="Para validar duplicidad con el FSR">
+            <input type="checkbox" name="incluye_isn"
+                   {% if r.incluye_isn %}checked{% endif %}> Incluye ISN
+        </label>
+        <span class="importe-cargo">= $ {{ r.importe_fmt }}</span>
+        <button type="submit" class="btn-primario">Guardar</button>
+        <button type="submit" class="btn-secundario btn-peligro"
+                formaction="/pie/cargo/{{ r.id }}/eliminar"
+                formnovalidate
+                onclick="return confirm('¿Eliminar el cargo {{ r.id }}?');">
+            Eliminar</button>
+    </form>
+    {% endfor %}
+</section>
+
+<section class="tarjeta-form">
+    <h2>Agregar variable (cargo) al pie</h2>
+    <form method="post" action="/pie/cargo" class="form-grid">
+        <label>Identificador <input name="identificador" required
+               placeholder="ej. POT" maxlength="12"></label>
+        <label>Nombre <input name="nombre" required
+               placeholder="ej. Otro porcentaje"></label>
+        <label>Porcentaje <input name="porcentaje" value="0"></label>
+        <label>Base
+            <select name="base">
+                {% for b in bases %}<option value="{{ b }}">{{ b }}</option>{% endfor %}
+            </select>
+        </label>
+        <label>Fórmula (solo modo avanzado) <input name="formula"></label>
+        <label class="campo-check">
+            <input type="checkbox" name="incluye_isn"> Incluye ISN
+        </label>
+        <button type="submit" class="btn-primario">Agregar cargo</button>
+    </form>
+    <p class="nota">⚠ Si usas el wizard (paso 6) para aplicar indirectos,
+    financiamiento o utilidad calculados, esos módulos sobrescriben los
+    porcentajes de IND_OF, IND_CAMPO, FIN, UTIL y ADIC al transferirse al
+    presupuesto.</p>
+</section>
+{% endblock %}

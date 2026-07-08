@@ -18,7 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from . import demo_seed, session_store
-from .routers import reportes, wizard
+from .routers import hoja, reportes, wizard
 
 DEMO_PASSWORD = os.environ.get("INVAR_DEMO_PASSWORD", "")
 if not DEMO_PASSWORD:
@@ -33,6 +33,7 @@ app.mount("/static", StaticFiles(directory="webapp/static"), name="static")
 templates = Jinja2Templates(directory="webapp/templates")
 app.include_router(reportes.router)
 app.include_router(wizard.router)
+app.include_router(hoja.router)
 
 
 def _estado_sesion(request: Request):
@@ -89,12 +90,13 @@ def proyecto_nuevo(request: Request):
 @app.post("/proyecto/plantilla")
 def proyecto_plantilla(request: Request):
     """Reemplaza el proyecto de la sesión por una copia del demo, para
-    usarlo como plantilla y solo ajustar datos/cantidades."""
+    usarlo como plantilla y solo ajustar datos/cantidades. Como ya viene
+    configurado, aterriza directo en la hoja de presupuesto."""
     session_id = request.cookies.get("session_id")
     if not session_id or session_store.get(session_id) is None:
         return RedirectResponse(url="/", status_code=303)
     session_store.put(session_id, demo_seed.construir_estado_demo())
-    return RedirectResponse(url="/wizard/1", status_code=303)
+    return RedirectResponse(url="/hoja", status_code=303)
 
 
 @app.post("/reset-demo")

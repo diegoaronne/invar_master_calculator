@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 {% block titulo %}Reporte {{ modo }} — {{ nombre_proyecto }}{% endblock %}
+{# La vista cliente se comparte/imprime: sin navegación interna. #}
+{% block nav %}{% if modo == "interno" %}{{ super() }}{% endif %}{% endblock %}
 {% block acciones_header %}
 <div class="acciones-header">
     {% if modo == "interno" %}

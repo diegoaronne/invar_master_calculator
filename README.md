@@ -76,12 +76,28 @@ Prototipo FastAPI + Jinja2 que envuelve el motor sin modificarlo:
 
 - **Login demo** con sesión aislada por usuario (cada quien recibe su
   propia copia del proyecto; dos pestañas no se pisan datos).
-- **Wizard de captura en 6 pasos**: datos generales → catálogo de
-  recursos (materiales, mano de obra con FSR, cuadrillas con fórmulas
-  `1/10`, herramienta %MO, auxiliares, equipo con costo horario) →
-  matrices de PU → WBS/conceptos con números generadores → calendario y
-  programa (ruta crítica, fraccionamiento) → sobrecostos (indirectos,
-  financiamiento, utilidad, adicionales).
+- **Hoja de presupuesto (vista de trabajo estilo OPUS)** en `/hoja`:
+  tree-grid jerárquico con expandir/colapsar y botones "Nivel 1 / 2 /
+  Todo", edición **en la celda** de descripciones y cantidades (Tab
+  avanza, Enter baja de fila, Esc cancela), alta rápida de capítulos y
+  conceptos, y **Gantt del programa de obra** alineado fila por fila en
+  un panel redimensionable (splitter); la ruta crítica se dibuja en rojo.
+- **Ficha de costeo por matriz** en `/matriz/{clave}`: pestañas de
+  filtro por tipo de insumo con subtotales (estilo OPUS), grilla de
+  insumos con cantidad/costo editables en celda, alta y baja de insumos,
+  desglose de compuestos (cuadrillas/auxiliares) y **pie de precios
+  integrado** (costo directo → indirectos → financiamiento → utilidad →
+  cargos adicionales → precio unitario de venta) con porcentajes y
+  bases editables en línea.
+- **Configuración del pie** en `/pie`: modo Estándar/Avanzado, base
+  Directo/Acumulable por cargo y alta/baja de variables del pie.
+- **Wizard de captura en 6 pasos** (modo guiado para la configuración
+  inicial): datos generales → catálogo de recursos (materiales, mano de
+  obra con FSR, cuadrillas con fórmulas `1/10`, herramienta %MO,
+  auxiliares, equipo con costo horario) → matrices de PU →
+  WBS/conceptos con números generadores → calendario y programa (ruta
+  crítica, fraccionamiento) → sobrecostos (indirectos, financiamiento,
+  utilidad, adicionales).
 - **Dos vistas de reporte**: *interna* (todo: pie de precios, FSR,
   explosión, suministros, financiamiento) y *cliente* (presupuesto y APU
   sin desglose de márgenes ni costo directo). Cada tabla se descarga en
@@ -104,7 +120,7 @@ interfaz `get/put/reset` de `webapp/session_store.py`.
 ## Pruebas
 
 ```bash
-python3 -m unittest discover -s tests   # motor + webapp (114 pruebas)
+python3 -m unittest discover -s tests   # motor + webapp (130 pruebas)
 ```
 
 Las pruebas web (`tests/test_webapp.py`) necesitan

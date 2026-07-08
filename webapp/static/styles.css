@@ -25,7 +25,7 @@ body {
     align-items: center;
 }
 
-.marca { font-size: 1.1rem; }
+.marca { font-size: 1.1rem; color: white; text-decoration: none; }
 
 .contenido {
     max-width: 960px;
@@ -328,4 +328,322 @@ th { background: #fafbfc; color: #444; }
     body { background: white; }
     .contenido { max-width: 100%; margin: 0; padding: 0; }
     .tabla-reporte { border: none; page-break-inside: avoid; }
+}
+
+/* --- vista de trabajo (hoja de presupuesto / ficha / gantt) ---------- */
+.nav-principal { display: flex; gap: 0.25rem; margin: 0 auto 0 2rem; }
+.nav-principal a {
+    color: rgba(255,255,255,0.85);
+    text-decoration: none;
+    font-size: 0.9rem;
+    padding: 0.35rem 0.8rem;
+    border-radius: 6px;
+}
+.nav-principal a:hover { background: rgba(255,255,255,0.12); color: white; }
+
+.contenido-ancho { max-width: none; margin: 1rem 1.5rem; }
+
+.encabezado-hoja {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+.encabezado-hoja h1 { margin: 0; font-size: 1.35rem; }
+
+.resumen-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.chip {
+    background: white;
+    border: 1px solid var(--gris-borde);
+    border-radius: 999px;
+    padding: 0.3rem 0.9rem;
+    font-size: 0.82rem;
+    color: #555;
+    white-space: nowrap;
+}
+.chip strong { color: var(--azul); margin-left: 0.35rem; }
+.chip-total { background: var(--azul); color: rgba(255,255,255,0.85); border-color: var(--azul); }
+.chip-total strong { color: white; }
+
+.barra-herramientas {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0.9rem 0;
+}
+.grupo-niveles { display: flex; align-items: center; gap: 0.35rem; font-size: 0.85rem; color: #555; }
+.btn-nivel {
+    background: white;
+    color: var(--azul);
+    border: 1px solid var(--gris-borde);
+    padding: 0.35rem 0.8rem;
+    font-size: 0.85rem;
+}
+.btn-nivel:hover { background: #eef3f8; }
+
+.agregar-rapido { position: relative; }
+.agregar-rapido summary { list-style: none; }
+.agregar-rapido summary::-webkit-details-marker { display: none; }
+.panel-agregar {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 6px);
+    left: 0;
+    background: white;
+    border: 1px solid var(--gris-borde);
+    border-radius: 10px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.14);
+    padding: 1rem;
+    display: flex;
+    gap: 1.5rem;
+    min-width: 640px;
+}
+.panel-agregar h3 { margin: 0 0 0.5rem; font-size: 0.95rem; color: var(--azul); }
+
+/* Splitter presupuesto | gantt */
+.hoja-layout {
+    display: flex;
+    align-items: stretch;
+    background: white;
+    border: 1px solid var(--gris-borde);
+    border-radius: 10px;
+    overflow: hidden;
+    height: calc(100vh - 300px);
+    min-height: 380px;
+}
+.panel-grid { flex: 1 1 58%; overflow: auto; min-width: 360px; }
+.splitter {
+    flex: 0 0 6px;
+    cursor: col-resize;
+    background: var(--gris-borde);
+}
+.splitter:hover { background: var(--azul-claro); }
+.panel-gantt { flex: 1 1 42%; overflow: hidden; background: #fcfdfe; }
+.gantt-scroll { overflow: auto; height: 100%; }
+.hoja-layout.sin-gantt .panel-gantt,
+.hoja-layout.sin-gantt .splitter { display: none; }
+
+/* Tree-grid: filas de altura fija para alinear con el gantt */
+.tabla-hoja { font-size: 0.86rem; }
+.tabla-hoja thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #f0f3f7;
+    height: 36px;
+    box-sizing: border-box;
+    white-space: nowrap;
+}
+.tabla-hoja tbody tr { height: 32px; }
+.tabla-hoja td {
+    padding: 0 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 420px;
+}
+.tabla-hoja .col-desc { min-width: 220px; }
+.tabla-hoja .col-num { text-align: right; width: 7.5rem; }
+.tabla-hoja .col-pct { text-align: right; width: 4.5rem; color: #777; }
+.tabla-hoja .col-unidad { width: 4.5rem; }
+.tabla-hoja .col-clave { min-width: 8rem; }
+.tabla-hoja .col-tipo { width: 8rem; }
+.tabla-hoja .col-base { width: 8.5rem; }
+.tabla-hoja .col-acciones { width: 2.5rem; text-align: center; }
+.tabla-hoja .celda-calc { font-variant-numeric: tabular-nums; }
+
+.fila-agrupador { background: #f6f8fb; font-weight: 600; color: var(--azul); }
+.fila-agrupador.nivel-1 { background: #e9eef5; }
+.fila-concepto code, .col-clave code { font-size: 0.82rem; }
+.flecha {
+    cursor: pointer;
+    display: inline-block;
+    width: 1.1rem;
+    color: var(--azul-claro);
+    user-select: none;
+}
+.cargando { text-align: center; color: #999; padding: 2rem !important; }
+
+/* Edición en celda */
+.celda-editable {
+    width: 100%;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    font: inherit;
+    color: inherit;
+    padding: 0.15rem 0.3rem;
+    box-sizing: border-box;
+}
+.celda-editable:hover { border-color: var(--gris-borde); background: white; }
+.celda-editable:focus {
+    outline: none;
+    border-color: var(--azul-claro);
+    background: white;
+    box-shadow: 0 0 0 2px rgba(69,123,157,0.18);
+}
+.celda-editable:disabled { color: #999; font-style: italic; }
+.celda-editable.pendiente { opacity: 0.5; }
+.editable-numero { text-align: right; font-variant-numeric: tabular-nums; }
+.fila-agrupador .editable-texto { font-weight: 600; color: var(--azul); }
+
+/* Gantt */
+.gantt-encabezado {
+    position: sticky;   /* sticky también crea el contexto de posición */
+    top: 0;
+    z-index: 10;
+    height: 36px;
+    background: #f0f3f7;
+    border-bottom: 1px solid var(--gris-borde);
+}
+.gantt-mes {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    border-left: 1px solid var(--gris-borde);
+    font-size: 0.72rem;
+    color: #666;
+    padding: 0.55rem 0 0 0.35rem;
+    box-sizing: border-box;
+    overflow: hidden;
+    white-space: nowrap;
+}
+.gantt-cuerpo { position: relative; }
+.gantt-fila {
+    position: relative;
+    height: 32px;
+    border-bottom: 1px solid #f0f2f5;
+    box-sizing: border-box;
+}
+.gantt-fila-agrupador { background: #f6f8fb; }
+.gantt-barra {
+    position: absolute;
+    top: 8px;
+    height: 14px;
+    background: var(--azul-claro);
+    border-radius: 3px;
+    box-shadow: inset 0 -2px rgba(0,0,0,0.15);
+}
+.gantt-barra.critica { background: var(--rojo); }
+.gantt-barra.resumen {
+    top: 12px;
+    height: 6px;
+    background: #6b7a90;
+    border-radius: 2px;
+}
+.nota-gantt { padding: 1.5rem; }
+.gantt-vacio .gantt-scroll { display: flex; align-items: flex-start; }
+
+/* Ficha de costeo */
+.ficha-encabezado { margin-bottom: 0.9rem; }
+.ficha-titulo { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.ficha-titulo h1 { margin: 0; font-size: 1.2rem; }
+.titulo-editable { font-size: 1.05rem; flex: 1 1 320px; min-width: 220px; }
+.badge {
+    background: #eef3f8;
+    color: var(--azul);
+    border-radius: 6px;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.78rem;
+    white-space: nowrap;
+}
+.badge-material { background: #fdeee0; color: #b05c1a; }
+.badge-manodeobra { background: #e8f2fd; color: #1a5fb0; }
+.badge-herramienta { background: #f2e8fd; color: #6a1ab0; }
+.badge-equipo { background: #fdf6e0; color: #9a7a00; }
+.badge-auxiliar { background: #e8fdf0; color: #1a8a4a; }
+.badge-matriz { background: #e0f0f4; color: #0e6b7d; }
+
+.tabs-tipos { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.75rem 0; }
+.tab-tipo {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+    background: white;
+    color: #555;
+    border: 1px solid var(--gris-borde);
+    border-radius: 8px;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.78rem;
+    line-height: 1.15;
+}
+.tab-tipo strong { color: var(--azul); font-size: 0.9rem; }
+.tab-tipo.activa { border-color: var(--azul); background: #eef3f8; }
+
+.fila-componente { color: #777; font-size: 0.82rem; background: #fbfcfd; }
+.celda-sangria { padding-left: 2.2rem !important; }
+.btn-quitar {
+    background: transparent;
+    color: #b0b6bf;
+    border: none;
+    padding: 0.1rem 0.4rem;
+    font-size: 0.9rem;
+}
+.btn-quitar:hover { color: var(--rojo); }
+.fila-alta td { padding: 0.4rem 0.5rem; }
+.fila-alta input {
+    width: 100%;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid var(--gris-borde);
+    border-radius: 6px;
+    box-sizing: border-box;
+}
+.fila-alta .btn-primario { padding: 0.35rem 0.7rem; }
+
+/* Pie de precios en la ficha */
+.pie-panel { margin-top: 1rem; }
+.pie-encabezado { display: flex; justify-content: space-between; align-items: center; }
+.pie-encabezado h2 { margin: 0; }
+.tabla-pie { margin-top: 0.75rem; max-width: 760px; }
+.tabla-pie .fila-cd td { font-weight: 600; }
+.tabla-pie .fila-pv td {
+    font-weight: 700;
+    color: var(--azul);
+    border-top: 2px solid var(--azul);
+    font-size: 0.95rem;
+}
+.selector-base {
+    border: 1px solid transparent;
+    background: transparent;
+    font: inherit;
+    border-radius: 4px;
+    padding: 0.15rem 0.2rem;
+}
+.selector-base:hover, .selector-base:focus { border-color: var(--gris-borde); background: white; }
+
+/* Configuración del pie */
+.form-cargo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--gris-borde);
+}
+.form-cargo label { display: flex; flex-direction: column; font-size: 0.8rem; color: #555; gap: 0.2rem; }
+.form-cargo input, .form-cargo select {
+    padding: 0.35rem 0.5rem;
+    border: 1px solid var(--gris-borde);
+    border-radius: 6px;
+}
+.form-cargo .importe-cargo { font-weight: 600; color: var(--azul); white-space: nowrap; }
+.btn-peligro { color: var(--rojo); }
+.opciones-modo { display: flex; align-items: center; gap: 1.25rem; }
+
+kbd {
+    background: #eef1f5;
+    border: 1px solid var(--gris-borde);
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    padding: 0 0.35rem;
+    font-size: 0.8rem;
+}
+
+@media print {
+    .hoja-layout { height: auto; overflow: visible; }
+    .panel-grid { overflow: visible; }
+    .panel-gantt { display: none; }
 }

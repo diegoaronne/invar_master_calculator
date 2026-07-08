@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block titulo %}Hoja de presupuesto — {{ nombre_proyecto }}{% endblock %}
+{% block clase_main %}contenido-ancho{% endblock %}
+{% block contenido %}
+<div class="encabezado-hoja">
+    <h1>{{ nombre_proyecto }}</h1>
+    <div class="resumen-chips" id="resumen-chips">
+        <span class="chip">Costo directo <strong data-resumen="costo_directo">—</strong></span>
+        <span class="chip">Precio de venta <strong data-resumen="precio_venta">—</strong></span>
+        <span class="chip">IVA <strong data-resumen="iva">—</strong></span>
+        <span class="chip chip-total">Total <strong data-resumen="total_con_iva">—</strong></span>
+    </div>
+</div>
+
+{% if error %}<p class="flash flash-error">{{ error }}</p>{% endif %}
+{% if ok %}<p class="flash flash-ok">{{ ok }}</p>{% endif %}
+<div id="flash-js"></div>
+
+<div class="barra-herramientas no-imprimir">
+    <div class="grupo-niveles">
+        <span>Mostrar:</span>
+        <button type="button" class="btn-nivel" data-nivel="1">Nivel 1</button>
+        <button type="button" class="btn-nivel" data-nivel="2">Nivel 2</button>
+        <button type="button" class="btn-nivel" data-nivel="0">Todo</button>
+    </div>
+    <button type="button" id="btn-gantt" class="btn-secundario">📅 Programa</button>
+    <details class="agregar-rapido">
+        <summary class="btn-secundario">➕ Agregar</summary>
+        <div class="panel-agregar">
+            <form method="post" action="/hoja/capitulo" class="form-grid">
+                <h3>Capítulo / partida</h3>
+                <label>Dentro de
+                    <select name="padre">
+                        {% for ruta, etiqueta in agrupadores %}
+                        <option value="{{ ruta }}">{{ etiqueta }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>Clave <input name="clave" required></label>
+                <label>Descripción <input name="descripcion"></label>
+                <button type="submit" class="btn-primario">Agregar capítulo</button>
+            </form>
+            <form method="post" action="/hoja/concepto" class="form-grid">
+                <h3>Concepto</h3>
+                <label>Dentro de
+                    <select name="padre">
+                        {% for ruta, etiqueta in agrupadores %}
+                        <option value="{{ ruta }}">{{ etiqueta }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>Clave <input name="clave" required></label>
+                <label>Descripción <input name="descripcion"></label>
+                <label>Unidad <input name="unidad" list="unidades" value="m2"></label>
+                <label>Cantidad <input name="cantidad" value="0"></label>
+                <label>Matriz (análisis PU)
+                    <select name="matriz">
+                        <option value="">— sin matriz —</option>
+                        {% for m in matrices %}
+                        <option value="{{ m.clave }}">{{ m.clave }} — {{ m.descripcion }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <button type="submit" class="btn-primario">Agregar concepto</button>
+            </form>
+        </div>
+    </details>
+</div>
+
+<div class="hoja-layout" id="hoja-layout">
+    <div class="panel-grid" id="panel-grid">
+        <table class="tabla-hoja" id="tabla-hoja">
+            <thead>
+                <tr>
+                    <th class="col-clave">Clave</th>
+                    <th class="col-desc">Descripción</th>
+                    <th class="col-unidad">Unidad</th>
+                    <th class="col-num">Cantidad</th>
+                    <th class="col-num">P. unitario</th>
+                    <th class="col-num">Total $</th>
+                    <th class="col-pct">%</th>
+                </tr>
+            </thead>
+            <tbody id="cuerpo-hoja">
+                <tr><td colspan="7" class="cargando">Cargando presupuesto…</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="splitter no-imprimir" id="splitter" title="Arrastra para redimensionar"></div>
+    <div class="panel-gantt" id="panel-gantt">
+        <div class="gantt-scroll" id="gantt-scroll">
+            <div class="gantt-encabezado" id="gantt-encabezado"></div>
+            <div class="gantt-cuerpo" id="gantt-cuerpo"></div>
+        </div>
+    </div>
+</div>
+
+<p class="nota">Edita <strong>descripción</strong> y <strong>cantidad</strong>
+directamente en la celda: <kbd>Tab</kbd> avanza, <kbd>Enter</kbd> baja a la
+siguiente fila, <kbd>Esc</kbd> cancela. Clic en la clave de un concepto abre
+su ficha de costeo. Las barras rojas del programa marcan la ruta crítica.</p>
+
+<datalist id="unidades">
+    {% for u in unidades %}<option value="{{ u }}">{% endfor %}
+</datalist>
+
+<script src="/static/hoja.js"></script>
+{% endblock %}

@@ -195,3 +195,207 @@ class TestWizardCompleto(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(_WEBAPP_DISPONIBLE,
+                     "fastapi/httpx no instalados; suite web omitida")
+class TestHojaPresupuesto(unittest.TestCase):
+    """Vista de trabajo estilo OPUS: tree-grid, edición en celda y Gantt."""
+
+    def setUp(self):
+        self.cliente = _cliente_logueado()
+
+    def test_hoja_y_api_devuelven_presupuesto(self):
+        r = self.cliente.get("/hoja")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("Hoja de presupuesto", r.text)
+
+        datos = self.cliente.get("/api/hoja").json()
+        self.assertTrue(datos["ok"])
+        ids = [f["id"] for f in datos["hoja"]["filas"]]
+        self.assertIn("a:02", ids)
+        self.assertIn("c:C-LOSA", ids)
+        fila = next(f for f in datos["hoja"]["filas"] if f["id"] == "c:C-LOSA")
+        self.assertEqual(fila["padre"], "a:02")
+        self.assertEqual(fila["matriz"], "MAT-LOSA")
+        self.assertIn("total_con_iva", datos["hoja"]["resumen"])
+
+    def test_editar_cantidad_recalcula_totales(self):
+        antes = self.cliente.get("/api/hoja").json()["hoja"]
+        r = self.cliente.patch("/api/concepto/C-LOSA",
+                               json={"cantidad": "3224"})
+        despues = r.json()
+        self.assertTrue(despues["ok"])
+        self.assertNotEqual(antes["resumen"]["precio_venta"],
+                            despues["hoja"]["resumen"]["precio_venta"])
+        fila = next(f for f in despues["hoja"]["filas"]
+                    if f["id"] == "c:C-LOSA")
+        self.assertEqual(fila["cantidad"], "3224")
+
+    def test_cantidad_con_generador_se_rechaza(self):
+        r = self.cliente.patch("/api/concepto/C-BASE",
+                               json={"cantidad": "99"})
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("generadores", r.json()["error"])
+
+    def test_cantidad_invalida_se_rechaza_y_no_rompe(self):
+        r = self.cliente.patch("/api/concepto/C-LOSA",
+                               json={"cantidad": "abc"})
+        self.assertEqual(r.status_code, 400)
+        r = self.cliente.get("/api/hoja")
+        self.assertTrue(r.json()["ok"])
+
+    def test_editar_descripcion_agrupador(self):
+        r = self.cliente.patch("/api/agrupador",
+                               json={"ruta": "02",
+                                     "descripcion": "Pavimento rígido"})
+        self.assertTrue(r.json()["ok"])
+        fila = next(f for f in r.json()["hoja"]["filas"]
+                    if f["id"] == "a:02")
+        self.assertEqual(fila["descripcion"], "Pavimento rígido")
+
+    def test_alta_rapida_de_capitulo_y_concepto(self):
+        r = self.cliente.post("/hoja/capitulo",
+                              data={"padre": "", "clave": "03",
+                                    "descripcion": "Señalización"},
+                              follow_redirects=False)
+        self.assertIn("ok=", r.headers["location"])
+        r = self.cliente.post("/hoja/concepto",
+                              data={"padre": "03", "clave": "C-SEN",
+                                    "descripcion": "Pintura de raya",
+                                    "unidad": "ml", "cantidad": "500",
+                                    "matriz": "MAT-BASE"},
+                              follow_redirects=False)
+        self.assertIn("ok=", r.headers["location"])
+        ids = [f["id"] for f in
+               self.cliente.get("/api/hoja").json()["hoja"]["filas"]]
+        self.assertIn("a:03", ids)
+        self.assertIn("c:C-SEN", ids)
+
+    def test_gantt_expone_barras_y_ruta_critica(self):
+        gantt = self.cliente.get("/api/gantt").json()["gantt"]
+        self.assertIsNotNone(gantt)
+        self.assertIn("c:C-LOSA", gantt["barras"])
+        self.assertTrue(gantt["barras"]["c:C-LOSA"][0]["critica"])
+        self.assertIn("a:02", gantt["barras"])  # barra resumen del capítulo
+        self.assertTrue(gantt["meses"])
+
+    def test_gantt_sin_programa_devuelve_null(self):
+        self.cliente.post("/proyecto/nuevo", follow_redirects=False)
+        r = self.cliente.get("/api/gantt")
+        self.assertIsNone(r.json()["gantt"])
+
+
+@unittest.skipUnless(_WEBAPP_DISPONIBLE,
+                     "fastapi/httpx no instalados; suite web omitida")
+class TestFichaCosteo(unittest.TestCase):
+    """Ficha de matriz: insumos editables, filtros por tipo y pie."""
+
+    def setUp(self):
+        self.cliente = _cliente_logueado()
+
+    def test_ficha_carga_con_subtotales_y_pie(self):
+        r = self.cliente.get("/matriz/MAT-LOSA?concepto=C-LOSA")
+        self.assertEqual(r.status_code, 200)
+        datos = self.cliente.get(
+            "/api/matriz/MAT-LOSA?concepto=C-LOSA").json()["ficha"]
+        tipos = [s["tipo"] for s in datos["subtotales"]]
+        self.assertEqual(tipos[0], "Todos")
+        self.assertIn("Mano de obra", tipos)
+        self.assertEqual(datos["concepto"]["clave"], "C-LOSA")
+        self.assertIn("C-LOSA", datos["conceptos_vinculados"])
+        ids_pie = [r_["id"] for r_ in datos["pie"]["renglones"]]
+        self.assertEqual(ids_pie[:2], ["IND_OF", "IND_CAMPO"])
+
+    def test_editar_cantidad_de_insumo_recalcula(self):
+        antes = self.cliente.get("/api/matriz/MAT-LOSA").json()["ficha"]
+        r = self.cliente.patch("/api/matriz/MAT-LOSA/insumo/MALLA-01",
+                               json={"cantidad": "2.10"})
+        despues = r.json()["ficha"]
+        self.assertNotEqual(antes["costo_directo_fmt"],
+                            despues["costo_directo_fmt"])
+        insumo = next(i for i in despues["insumos"]
+                      if i["clave"] == "MALLA-01")
+        self.assertEqual(insumo["cantidad"], "2.10")
+
+    def test_cantidad_acepta_formula(self):
+        r = self.cliente.patch("/api/matriz/MAT-LOSA/insumo/MALLA-01",
+                               json={"cantidad": "1/10"})
+        self.assertTrue(r.json()["ok"])
+
+    def test_agregar_y_quitar_insumo(self):
+        r = self.cliente.post("/api/matriz/MAT-LOSA/insumo",
+                              json={"recurso": "ARE-01", "cantidad": "0.5"})
+        claves = [i["clave"] for i in r.json()["ficha"]["insumos"]]
+        self.assertIn("ARE-01", claves)
+        # Duplicado se rechaza.
+        r = self.cliente.post("/api/matriz/MAT-LOSA/insumo",
+                              json={"recurso": "ARE-01", "cantidad": "1"})
+        self.assertEqual(r.status_code, 400)
+        r = self.cliente.delete("/api/matriz/MAT-LOSA/insumo/ARE-01")
+        claves = [i["clave"] for i in r.json()["ficha"]["insumos"]]
+        self.assertNotIn("ARE-01", claves)
+
+    def test_editar_costo_de_material(self):
+        r = self.cliente.patch("/api/recurso/MALLA-01?matriz=MAT-LOSA",
+                               json={"costo": "96"})
+        insumo = next(i for i in r.json()["ficha"]["insumos"]
+                      if i["clave"] == "MALLA-01")
+        self.assertEqual(insumo["costo"], "96")
+        # Un compuesto no admite costo directo.
+        r = self.cliente.patch("/api/recurso/CUAD-01?matriz=MAT-LOSA",
+                               json={"costo": "100"})
+        self.assertEqual(r.status_code, 400)
+
+    def test_editar_pie_cambia_precio_venta(self):
+        antes = self.cliente.get("/api/matriz/MAT-LOSA").json()["ficha"]
+        r = self.cliente.patch("/api/pie/UTIL?matriz=MAT-LOSA",
+                               json={"porcentaje": "25"})
+        despues = r.json()["ficha"]
+        self.assertNotEqual(antes["precio_venta_fmt"],
+                            despues["precio_venta_fmt"])
+        r = self.cliente.patch("/api/pie/UTIL?matriz=MAT-LOSA",
+                               json={"base": "Directo"})
+        self.assertTrue(r.json()["ok"])
+        util = next(r_ for r_ in r.json()["ficha"]["pie"]["renglones"]
+                    if r_["id"] == "UTIL")
+        self.assertEqual(util["base"], "Directo")
+
+
+@unittest.skipUnless(_WEBAPP_DISPONIBLE,
+                     "fastapi/httpx no instalados; suite web omitida")
+class TestConfiguracionPie(unittest.TestCase):
+    def setUp(self):
+        self.cliente = _cliente_logueado()
+
+    def test_pagina_y_alta_baja_de_cargos(self):
+        r = self.cliente.get("/pie")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("Indirectos de oficina central", r.text)
+
+        r = self.cliente.post("/pie/cargo",
+                              data={"identificador": "POT",
+                                    "nombre": "Otro porcentaje",
+                                    "porcentaje": "1.5",
+                                    "base": "Directo"},
+                              follow_redirects=False)
+        self.assertIn("ok=", r.headers["location"])
+        self.assertIn("POT", self.cliente.get("/pie").text)
+
+        r = self.cliente.post("/pie/cargo/POT",
+                              data={"nombre": "Porcentaje municipal",
+                                    "porcentaje": "2", "base": "Acumulable"},
+                              follow_redirects=False)
+        self.assertIn("ok=", r.headers["location"])
+        self.assertIn("Porcentaje municipal", self.cliente.get("/pie").text)
+
+        r = self.cliente.post("/pie/cargo/POT/eliminar",
+                              follow_redirects=False)
+        self.assertIn("ok=", r.headers["location"])
+        self.assertNotIn("Porcentaje municipal", self.cliente.get("/pie").text)
+
+    def test_cambio_de_modo(self):
+        r = self.cliente.post("/pie/modo", data={"modo": "Avanzado"},
+                              follow_redirects=False)
+        self.assertIn("ok=", r.headers["location"])
+        self.assertIn("Fórmula", self.cliente.get("/pie").text)

@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block titulo %}Ficha de costeo {{ clave_matriz }} — {{ nombre_proyecto }}{% endblock %}
+{% block clase_main %}contenido-ancho{% endblock %}
+{% block acciones_header %}
+<div class="acciones-header">
+    <a href="/hoja" class="btn-secundario">← Hoja de presupuesto</a>
+</div>
+{% endblock %}
+{% block contenido %}
+<div id="flash-js"></div>
+
+<section class="tarjeta-form ficha-encabezado" id="ficha-encabezado"
+         data-matriz="{{ clave_matriz }}" data-concepto="{{ clave_concepto }}">
+    <div class="ficha-titulo">
+        <h1><code id="ficha-clave">{{ clave_matriz }}</code></h1>
+        <input id="ficha-descripcion" class="celda-editable editable-texto titulo-editable"
+               title="Descripción de la matriz (editable)">
+        <span class="badge" id="ficha-unidad"></span>
+    </div>
+    <div class="resumen-chips">
+        <span class="chip">Costo directo unitario
+            <strong id="ficha-cd">—</strong></span>
+        <span class="chip chip-total">Precio unitario de venta
+            <strong id="ficha-pv">—</strong></span>
+        <span class="chip" id="chip-concepto" hidden>
+            Concepto <strong id="ficha-concepto-info"></strong></span>
+        <span class="chip" id="chip-vinculados" hidden>
+            Vinculada a <strong id="ficha-vinculados"></strong></span>
+    </div>
+</section>
+
+<nav class="tabs-tipos no-imprimir" id="tabs-tipos"></nav>
+
+<section class="tarjeta-form">
+    <table class="tabla-hoja tabla-insumos" id="tabla-insumos">
+        <thead>
+            <tr>
+                <th class="col-tipo">Tipo</th>
+                <th class="col-clave">Clave</th>
+                <th class="col-desc">Descripción</th>
+                <th class="col-unidad">Unidad</th>
+                <th class="col-num">Cantidad</th>
+                <th class="col-num">Costo unitario</th>
+                <th class="col-num">Total $</th>
+                <th class="col-acciones no-imprimir"></th>
+            </tr>
+        </thead>
+        <tbody id="cuerpo-insumos">
+            <tr><td colspan="8" class="cargando">Cargando ficha…</td></tr>
+        </tbody>
+        <tfoot class="no-imprimir">
+            <tr class="fila-alta">
+                <td colspan="3">
+                    <input id="alta-recurso" list="lista-recursos"
+                           placeholder="Clave o descripción del recurso a agregar…">
+                </td>
+                <td></td>
+                <td><input id="alta-cantidad" class="editable-numero" value="1"
+                           title="Cantidad (admite fórmulas, ej. 1/10)"></td>
+                <td colspan="2"></td>
+                <td><button type="button" id="alta-boton"
+                            class="btn-primario">➕</button></td>
+            </tr>
+        </tfoot>
+    </table>
+</section>
+
+<section class="tarjeta-form pie-panel">
+    <div class="pie-encabezado">
+        <h2>Pie de precios unitarios</h2>
+        <a href="/pie" class="btn-secundario no-imprimir">⚙ Configurar pie completo</a>
+    </div>
+    <table class="tabla-hoja tabla-pie" id="tabla-pie">
+        <thead>
+            <tr>
+                <th class="col-desc">Cargo</th>
+                <th class="col-num">%</th>
+                <th class="col-base">Base</th>
+                <th class="col-num">Sobre $</th>
+                <th class="col-num">Importe $</th>
+            </tr>
+        </thead>
+        <tbody id="cuerpo-pie"></tbody>
+    </table>
+    <p class="nota">Los porcentajes se editan aquí mismo. La base
+    <em>Acumulable</em> aplica el porcentaje sobre la suma acumulada
+    (estándar en obra pública); <em>Directo</em>, solo sobre el costo
+    directo. Factor de sobrecosto: <strong id="pie-factor">—</strong></p>
+</section>
+
+<datalist id="lista-recursos">
+    {% for r in recursos %}
+    <option value="{{ r.clave }}">[{{ r.tipo.value }}] {{ r.descripcion }}</option>
+    {% endfor %}
+</datalist>
+
+<script src="/static/ficha.js"></script>
+{% endblock %}

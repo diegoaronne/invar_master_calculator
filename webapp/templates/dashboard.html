@@ -10,15 +10,22 @@
 {% if ok %}<p class="flash flash-ok">{{ ok }}</p>{% endif %}
 <p class="subtitulo">
     Sesión de demostración aislada: lo que captures aquí no afecta a
-    ninguna otra persona. Empieza por el wizard para capturar tu propio
-    proyecto, o explora los reportes del proyecto actual.
+    ninguna otra persona. Tu pantalla de trabajo es la hoja de
+    presupuesto; el wizard queda como modo guiado para la configuración
+    inicial de un proyecto nuevo.
 </p>
 
 <div class="grid-acciones">
+    <a class="tarjeta-accion" href="/hoja">
+        <h2>📊 Hoja de presupuesto</h2>
+        <p>La vista de trabajo: presupuesto jerárquico con edición en
+        celda, fichas de costeo por matriz, pie de precios y programa
+        de obra (Gantt) lado a lado.</p>
+    </a>
     <a class="tarjeta-accion" href="/wizard/1">
-        <h2>✏️ Wizard de captura</h2>
-        <p>Captura o edita el proyecto paso a paso: datos generales,
-        catálogo, matrices, WBS, programa y sobrecostos.</p>
+        <h2>✏️ Wizard (modo guiado)</h2>
+        <p>Configuración inicial paso a paso: datos generales, catálogo,
+        matrices, WBS, programa y sobrecostos.</p>
     </a>
     <a class="tarjeta-accion" href="/reportes/interno">
         <h2>🔒 Vista interna</h2>
