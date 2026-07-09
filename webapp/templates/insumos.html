@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block titulo %}Explosión de insumos — {{ nombre_proyecto }}{% endblock %}
+{% block clase_main %}contenido-ancho{% endblock %}
+{% block acciones_header %}
+<div class="acciones-header">
+    <a href="/hoja" class="btn-secundario">← Hoja de presupuesto</a>
+</div>
+{% endblock %}
+{% block contenido %}
+<div id="flash-js"></div>
+
+<section class="tarjeta-form ficha-encabezado">
+    <div class="ficha-titulo">
+        <h1>Explosión de insumos</h1>
+        <span class="badge">{{ nombre_proyecto }}</span>
+    </div>
+    <div class="resumen-chips">
+        <span class="chip">Insumos <strong id="chip-insumos">—</strong></span>
+        <span class="chip chip-total">Importe total (costo directo)
+            <strong id="chip-total">—</strong></span>
+    </div>
+</section>
+
+<div class="insumos-layout">
+    <aside class="tarjeta-form panel-insumos no-imprimir">
+        <h2>Configuración</h2>
+
+        <fieldset class="grupo-config">
+            <legend>Nivel de detalle</legend>
+            <label><input type="radio" name="nivel" value="basicos" checked>
+                Recursos básicos
+                <small>abre cuadrillas, auxiliares y submatrices hasta el
+                recurso simple</small></label>
+            <label><input type="radio" name="nivel" value="compuestos">
+                Conservar compuestos
+                <small>cuadrillas y auxiliares aparecen como renglón
+                propio</small></label>
+            <label><input type="radio" name="nivel" value="primer">
+                Primer nivel
+                <small>solo los insumos directos de cada matriz</small></label>
+        </fieldset>
+
+        <fieldset class="grupo-config">
+            <legend>Tipos de recurso</legend>
+            <div class="lista-tipos" id="lista-tipos">
+                {% for tipo in tipos %}
+                <label><input type="checkbox" class="filtro-tipo"
+                              value="{{ tipo }}" checked> {{ tipo }}</label>
+                {% endfor %}
+            </div>
+            <label class="check-suelto">
+                <input type="checkbox" id="chk-desglosar">
+                Abrir el costo horario del equipo en sus cargos
+            </label>
+        </fieldset>
+
+        <fieldset class="grupo-config">
+            <legend>Programa de suministros</legend>
+            {% if hay_programa %}
+            <label class="check-suelto">
+                <input type="checkbox" id="chk-programa">
+                Distribuir por periodo (según programa de obra)
+            </label>
+            <div class="config-programa" id="config-programa" hidden>
+                <label>Escala
+                    <select id="sel-escala">
+                        {% for e in escalas %}
+                        <option value="{{ e }}" {% if e == "Quincenas" %}selected{% endif %}>{{ e }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label>Mostrar
+                    <select id="sel-por">
+                        <option value="monto">Montos $</option>
+                        <option value="cantidad">Cantidades</option>
+                    </select>
+                </label>
+                <label class="check-suelto">
+                    <input type="checkbox" id="chk-numerados">
+                    Numerar periodos con prefijo
+                    <input type="text" id="txt-prefijo" value="P" maxlength="4"
+                           class="input-prefijo" title="Prefijo del periodo">
+                </label>
+            </div>
+            {% else %}
+            <p class="nota">No hay actividades programadas. Captura el
+            programa de obra en el wizard (paso 5) para distribuir los
+            suministros por periodo.</p>
+            {% endif %}
+        </fieldset>
+
+        <button type="button" id="btn-csv" class="btn-secundario">
+            ⬇ Descargar CSV
+        </button>
+    </aside>
+
+    <section class="tarjeta-form grilla-insumos">
+        <div class="barra-grilla no-imprimir">
+            <input type="search" id="txt-buscar"
+                   placeholder="Buscar por clave o descripción…">
+            <span class="nota-grilla" id="nota-grilla"></span>
+        </div>
+        <div class="envoltura-tabla">
+            <table class="tabla-hoja tabla-explosion" id="tabla-explosion">
+                <thead id="cabeza-explosion">
+                    <tr><th>Cargando…</th></tr>
+                </thead>
+                <tbody id="cuerpo-explosion"></tbody>
+                <tfoot id="pie-explosion"></tfoot>
+            </table>
+        </div>
+    </section>
+</div>
+
+<script src="/static/insumos.js"></script>
+{% endblock %}

@@ -11,11 +11,13 @@ matriz y el Gantt del programa de obra. Toda cifra se entrega dos veces:
 from __future__ import annotations
 
 import datetime as dt
-from decimal import Decimal
+from decimal import Decimal, ROUND_CEILING
 from typing import Dict, List, Optional, Tuple
 
 import invar_calculator as ic
+from invar_calculator.explosion import ExplosionInsumos, LineaExplosion
 from invar_calculator.modelos import Agrupador, Concepto, Matriz, TipoRecurso
+from invar_calculator.programa import EscalaTiempo
 
 #: Orden de las pestañas de tipo en la ficha de costeo (estilo OPUS).
 ORDEN_TIPOS = [
@@ -336,3 +338,189 @@ def _meses(inicio: dt.date, fin: dt.date, total_dias: int) -> List[dict]:
         })
         cursor = siguiente
     return meses
+
+
+# -------------------------------------------------------------- insumos
+#: Niveles de detalle de la explosión (RF-01 video 22 + variantes).
+#: - basicos:    recursión completa hasta recursos simples (motor).
+#: - compuestos: se detiene en cuadrillas/auxiliares y equipo, que
+#:               aparecen como renglón con su costo compuesto; solo las
+#:               submatrices se siguen abriendo.
+#: - primer:     únicamente los insumos directos de cada matriz.
+NIVELES_EXPLOSION = ("basicos", "compuestos", "primer")
+
+
+def fmt_cant(proyecto: ic.Proyecto, valor: Decimal) -> str:
+    """Cantidad con los decimales del ámbito 'factor', separador de miles
+    y sin ceros de cola (mínimo dos decimales)."""
+    texto = f"{proyecto.precision.factor(valor):,}"
+    if "." in texto:
+        entero, decimales = texto.rstrip("0").split(".")
+        texto = f"{entero}.{decimales.ljust(2, '0')}"
+    return texto
+
+
+def datos_insumos(proyecto: ic.Proyecto,
+                  nivel: str = "basicos",
+                  tipos: Optional[set] = None,
+                  desglosar_equipo: bool = False,
+                  con_programa: bool = False,
+                  escala: EscalaTiempo = EscalaTiempo.MES,
+                  por: str = "monto") -> dict:
+    """Explosión de insumos del presupuesto completo y, opcionalmente,
+    el programa de suministros por periodo sobre el programa de obra."""
+    if nivel not in NIVELES_EXPLOSION:
+        raise ValueError(f"Nivel de explosión desconocido: {nivel!r}.")
+    mon = proyecto.precision.moneda
+    lineas = _lineas_explosion(proyecto, list(proyecto.iter_conceptos()),
+                               tipos, nivel, desglosar_equipo)
+
+    total_importe = sum((mon(l.importe) for l in lineas.values()), Decimal(0))
+    filas = []
+    for linea in lineas.values():
+        importe = mon(linea.importe)
+        costo = mon(importe / linea.cantidad) if linea.cantidad else Decimal(0)
+        filas.append({
+            "clave": linea.clave,
+            "descripcion": linea.descripcion,
+            "tipo": linea.tipo,
+            "unidad": linea.unidad,
+            "cantidad_fmt": fmt_cant(proyecto, linea.cantidad),
+            "costo_fmt": fmt(costo),
+            "importe_fmt": fmt(importe),
+            "pct": _pct(importe, total_importe),
+        })
+
+    datos = {
+        "nivel": nivel,
+        "filas": filas,
+        "total_importe_fmt": fmt(total_importe),
+        "num_insumos": len(filas),
+        "hay_programa": bool(proyecto.programa.actividades),
+        "periodos": [],
+        "totales_periodo": [],
+        "por": por,
+    }
+    if con_programa and datos["hay_programa"]:
+        _agregar_suministros(proyecto, datos, tipos, nivel,
+                             desglosar_equipo, escala, por)
+    return datos
+
+
+def _agregar_suministros(proyecto: ic.Proyecto, datos: dict,
+                         tipos: Optional[set], nivel: str,
+                         desglosar_equipo: bool, escala: EscalaTiempo,
+                         por: str) -> None:
+    series = _series_suministros(proyecto, tipos, nivel,
+                                 desglosar_equipo, escala, por)
+    etiquetas = sorted({p for serie in series.values() for p in serie})
+    formatear = (fmt if por == "monto"
+                 else lambda v: fmt_cant(proyecto, v))
+    redondear = (proyecto.precision.moneda if por == "monto"
+                 else proyecto.precision.factor)
+    totales = {e: Decimal(0) for e in etiquetas}
+    for fila in datos["filas"]:
+        serie = series.get(fila["clave"], {})
+        celdas = []
+        for etiqueta in etiquetas:
+            valor = redondear(serie.get(etiqueta, Decimal(0)))
+            totales[etiqueta] += valor
+            celdas.append(formatear(valor) if valor else "")
+        fila["periodos"] = celdas
+    datos["periodos"] = etiquetas
+    datos["totales_periodo"] = [formatear(totales[e]) for e in etiquetas]
+
+
+def _series_suministros(proyecto: ic.Proyecto, tipos: Optional[set],
+                        nivel: str, desglosar_equipo: bool,
+                        escala: EscalaTiempo,
+                        por: str) -> Dict[str, Dict[str, Decimal]]:
+    """{clave_insumo: {periodo: cantidad|monto}} con el nivel elegido.
+
+    Mismo esquema que ``ProgramaSuministros`` del motor: explosión por
+    unidad de concepto × distribución temporal de su cantidad.
+    """
+    resultado: Dict[str, Dict[str, Decimal]] = {}
+    for actividad in proyecto.programa.actividades:
+        concepto = actividad.concepto
+        if concepto.matriz is None:
+            continue
+        unitario = Concepto(clave=concepto.clave,
+                            descripcion=concepto.descripcion,
+                            unidad=concepto.unidad, cantidad=1,
+                            matriz=concepto.matriz)
+        por_unidad = _lineas_explosion(proyecto, [unitario], tipos, nivel,
+                                       desglosar_equipo,
+                                       aplicar_indivisibles=False)
+        reparto = proyecto.programa.distribuir_actividad(
+            actividad, escala, concepto.cantidad_efectiva)
+        for clave, linea in por_unidad.items():
+            valor = linea.cantidad if por == "cantidad" else linea.importe
+            destino = resultado.setdefault(clave, {})
+            for etiqueta, cantidad_periodo in reparto.items():
+                destino[etiqueta] = (destino.get(etiqueta, Decimal(0))
+                                     + valor * cantidad_periodo)
+    return resultado
+
+
+def _lineas_explosion(proyecto: ic.Proyecto, conceptos: List[Concepto],
+                      tipos: Optional[set], nivel: str,
+                      desglosar_equipo: bool,
+                      aplicar_indivisibles: bool = True
+                      ) -> Dict[str, LineaExplosion]:
+    if nivel == "basicos":
+        motor = ExplosionInsumos(proyecto, tipos, desglosar_equipo)
+        return motor.generar(conceptos, aplicar_indivisibles)
+    acumulador: Dict[str, LineaExplosion] = {}
+    for concepto in conceptos:
+        if concepto.matriz is None:
+            continue
+        _expandir_nivel(proyecto, concepto.matriz,
+                        concepto.cantidad_efectiva, tipos,
+                        nivel == "primer", acumulador)
+    if aplicar_indivisibles:
+        _redondear_indivisibles(proyecto, acumulador)
+    return dict(sorted(acumulador.items()))
+
+
+def _expandir_nivel(proyecto: ic.Proyecto, matriz: Matriz, cantidad: Decimal,
+                    tipos: Optional[set], solo_primer_nivel: bool,
+                    acumulador: Dict[str, LineaExplosion]) -> None:
+    """Explosión que conserva los compuestos como renglones propios."""
+    costo_mo = sum(
+        (i.cantidad_decimal * i.recurso.costo_unitario(proyecto)
+         for i in matriz.insumos
+         if i.recurso.tipo == TipoRecurso.MANO_OBRA
+         and not i.recurso.es_porcentaje_mo), Decimal(0))
+    for insumo in matriz.insumos:
+        hijo = insumo.recurso
+        cantidad_hija = cantidad * insumo.cantidad_decimal
+        if hijo.es_porcentaje_mo:
+            importe = cantidad_hija * costo_mo
+        elif isinstance(hijo, Matriz) and not solo_primer_nivel:
+            _expandir_nivel(proyecto, hijo, cantidad_hija, tipos,
+                            solo_primer_nivel, acumulador)
+            continue
+        else:
+            importe = cantidad_hija * hijo.costo_unitario(proyecto)
+        if tipos is None or hijo.tipo in tipos:
+            linea = acumulador.setdefault(hijo.clave, LineaExplosion(
+                clave=hijo.clave, descripcion=hijo.descripcion,
+                unidad=hijo.unidad, tipo=hijo.tipo.value))
+            linea.cantidad += cantidad_hija
+            linea.importe += importe
+
+
+def _redondear_indivisibles(proyecto: ic.Proyecto,
+                            acumulador: Dict[str, LineaExplosion]) -> None:
+    """RF-04 video 13: los indivisibles se explotan en enteros (techo)."""
+    for linea in acumulador.values():
+        if linea.clave not in proyecto.catalogo:
+            continue
+        if not proyecto.catalogo.obtener(linea.clave).indivisible:
+            continue
+        entera = linea.cantidad.to_integral_value(rounding=ROUND_CEILING)
+        if entera != linea.cantidad and linea.cantidad > 0:
+            costo = linea.importe / linea.cantidad
+            linea.cantidad = entera
+            linea.importe = entera * costo

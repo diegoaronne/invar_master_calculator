@@ -647,3 +647,100 @@ kbd {
     .panel-grid { overflow: visible; }
     .panel-gantt { display: none; }
 }
+
+/* ------------------------- explosión de insumos / suministros -------- */
+.insumos-layout {
+    display: grid;
+    grid-template-columns: 270px minmax(0, 1fr);
+    gap: 1rem;
+    align-items: start;
+}
+@media (max-width: 900px) {
+    .insumos-layout { grid-template-columns: 1fr; }
+}
+.panel-insumos { position: sticky; top: 1rem; }
+.grupo-config {
+    border: 1px solid var(--gris-borde);
+    border-radius: 8px;
+    padding: 0.6rem 0.75rem 0.75rem;
+    margin-bottom: 0.9rem;
+}
+.grupo-config legend {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--azul);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0 0.3rem;
+}
+.grupo-config > label {
+    display: block;
+    font-size: 0.86rem;
+    margin-bottom: 0.45rem;
+    cursor: pointer;
+}
+.grupo-config label small {
+    display: block;
+    color: #777;
+    font-size: 0.74rem;
+    margin-left: 1.35rem;
+}
+.lista-tipos {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.15rem 0.5rem;
+    margin-bottom: 0.5rem;
+}
+.lista-tipos label { font-size: 0.82rem; cursor: pointer; white-space: nowrap; }
+.check-suelto { font-size: 0.82rem; cursor: pointer; display: block; }
+.config-programa { margin-top: 0.6rem; }
+.config-programa > label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.82rem;
+    margin-bottom: 0.45rem;
+}
+.config-programa select {
+    flex: 1;
+    padding: 0.3rem 0.4rem;
+    border: 1px solid var(--gris-borde);
+    border-radius: 6px;
+}
+.input-prefijo {
+    width: 3rem;
+    padding: 0.2rem 0.35rem;
+    border: 1px solid var(--gris-borde);
+    border-radius: 6px;
+    text-align: center;
+}
+.barra-grilla {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.6rem;
+}
+.barra-grilla input[type="search"] {
+    flex: 0 1 320px;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid var(--gris-borde);
+    border-radius: 6px;
+}
+.nota-grilla { color: #777; font-size: 0.8rem; }
+.envoltura-tabla { overflow-x: auto; }
+.tabla-explosion { min-width: 100%; white-space: nowrap; }
+.tabla-explosion .col-desc { white-space: normal; }
+.tabla-explosion .col-periodo {
+    background: #f6f9fc;
+    border-left: 1px solid var(--gris-borde);
+    min-width: 6.5rem;
+}
+.tabla-explosion thead .col-periodo { color: var(--azul); }
+.tabla-explosion .fila-total td {
+    font-weight: 700;
+    color: var(--azul);
+    border-top: 2px solid var(--azul);
+    background: #f2f6fa;
+}
+.badge-flete { background: #fde8e8; color: #b01a1a; }
+.badge-subcontrato { background: #e8e8fd; color: #3a1ab0; }

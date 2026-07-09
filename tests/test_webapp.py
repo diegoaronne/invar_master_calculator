@@ -399,3 +399,78 @@ class TestConfiguracionPie(unittest.TestCase):
                               follow_redirects=False)
         self.assertIn("ok=", r.headers["location"])
         self.assertIn("Fórmula", self.cliente.get("/pie").text)
+
+
+@unittest.skipUnless(_WEBAPP_DISPONIBLE,
+                     "fastapi/httpx no instalados; suite web omitida")
+class TestExplosionInsumos(unittest.TestCase):
+    """Vista de explosión de insumos y programa de suministros."""
+
+    def setUp(self):
+        self.cliente = _cliente_logueado()
+
+    def test_pagina_carga(self):
+        r = self.cliente.get("/insumos")
+        self.assertEqual(r.status_code, 200)
+        self.assertIn("Explosión de insumos", r.text)
+        self.assertIn("Programa de suministros", r.text)
+
+    def test_api_basicos(self):
+        datos = self.cliente.get("/api/insumos").json()["insumos"]
+        self.assertGreater(datos["num_insumos"], 0)
+        tipos = {f["tipo"] for f in datos["filas"]}
+        # La explosión básica abre cuadrillas y auxiliares: no quedan
+        # renglones de tipo Auxiliar ni Matriz.
+        self.assertNotIn("Auxiliar", tipos)
+        self.assertNotIn("Matriz", tipos)
+        self.assertIn("Material", tipos)
+        self.assertIn("Mano de obra", tipos)
+
+    def test_api_niveles_conservan_compuestos(self):
+        for nivel in ("compuestos", "primer"):
+            datos = self.cliente.get(
+                f"/api/insumos?nivel={nivel}").json()["insumos"]
+            tipos = {f["tipo"] for f in datos["filas"]}
+            self.assertIn("Auxiliar", tipos,
+                          f"nivel {nivel} debe conservar auxiliares")
+
+    def test_api_nivel_invalido(self):
+        r = self.cliente.get("/api/insumos?nivel=maximo")
+        self.assertEqual(r.status_code, 400)
+
+    def test_filtro_por_tipo(self):
+        datos = self.cliente.get(
+            "/api/insumos?tipos=Material").json()["insumos"]
+        self.assertTrue(datos["filas"])
+        self.assertEqual({f["tipo"] for f in datos["filas"]}, {"Material"})
+
+    def test_desglose_costo_horario(self):
+        datos = self.cliente.get(
+            "/api/insumos?desglosar=1").json()["insumos"]
+        claves = [f["clave"] for f in datos["filas"]]
+        self.assertTrue(any("." in c for c in claves),
+                        "el desglose debe generar renglones EQ.componente")
+        self.assertTrue(any("Cargos fijos" in f["tipo"]
+                            for f in datos["filas"]))
+
+    def test_suministros_por_periodo(self):
+        datos = self.cliente.get(
+            "/api/insumos?programa=1&escala=Quincenas&por=monto"
+        ).json()["insumos"]
+        self.assertTrue(datos["periodos"])
+        self.assertEqual(len(datos["totales_periodo"]),
+                         len(datos["periodos"]))
+        for fila in datos["filas"]:
+            self.assertEqual(len(fila["periodos"]), len(datos["periodos"]))
+
+    def test_suministros_en_cantidades_y_meses(self):
+        datos = self.cliente.get(
+            "/api/insumos?programa=1&escala=Meses&por=cantidad"
+        ).json()["insumos"]
+        self.assertTrue(datos["periodos"])
+        self.assertTrue(all(len(p) == 7 for p in datos["periodos"]),
+                        "escala mensual usa etiquetas AAAA-MM")
+
+    def test_api_requiere_sesion(self):
+        r = TestClient(app).get("/api/insumos")
+        self.assertEqual(r.status_code, 401)

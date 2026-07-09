@@ -91,6 +91,13 @@ Prototipo FastAPI + Jinja2 que envuelve el motor sin modificarlo:
   bases editables en línea.
 - **Configuración del pie** en `/pie`: modo Estándar/Avanzado, base
   Directo/Acumulable por cargo y alta/baja de variables del pie.
+- **Explosión de insumos y programa de suministros** en `/insumos`:
+  panel de configuración con tres niveles de detalle (recursos básicos,
+  conservar compuestos o primer nivel), filtros por los 8 tipos de
+  recurso, desglose opcional del costo horario del equipo en sus cargos
+  y distribución por periodo sobre el programa de obra (días / semanas /
+  quincenas / meses, en cantidades o montos, con periodos numerables por
+  prefijo). Incluye buscador, columna de participación % y descarga CSV.
 - **Wizard de captura en 6 pasos** (modo guiado para la configuración
   inicial): datos generales → catálogo de recursos (materiales, mano de
   obra con FSR, cuadrillas con fórmulas `1/10`, herramienta %MO,
@@ -120,7 +127,7 @@ interfaz `get/put/reset` de `webapp/session_store.py`.
 ## Pruebas
 
 ```bash
-python3 -m unittest discover -s tests   # motor + webapp (130 pruebas)
+python3 -m unittest discover -s tests   # motor + webapp (139 pruebas)
 ```
 
 Las pruebas web (`tests/test_webapp.py`) necesitan
